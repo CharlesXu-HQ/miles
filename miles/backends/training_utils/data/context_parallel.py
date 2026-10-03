@@ -371,7 +371,7 @@ def allgather_cp_redistribute(
             if e <= s:
                 # This rank has no response logprobs for this sample
                 full_resp = torch.zeros(
-                    response_length,
+                    (response_length, *value.shape[1:]),
                     dtype=value.dtype,
                     device=value.device,
                     requires_grad=True,
@@ -379,7 +379,11 @@ def allgather_cp_redistribute(
             else:
                 resp_start = s - logit_global_start
                 resp_end = e - logit_global_start
-                full_resp = F.pad(value, (resp_start, response_length - resp_end))
+                padding = (0, 0, resp_start, response_length - resp_end) if value.ndim > 1 else (
+                    resp_start,
+                    response_length - resp_end,
+                )
+                full_resp = F.pad(value, padding)
 
             assert full_resp.size(0) == response_length, f"Expected {response_length}, got {full_resp.size(0)}"
             full_resps.append(full_resp)
